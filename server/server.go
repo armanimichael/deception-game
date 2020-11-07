@@ -48,4 +48,5 @@ func handleRequest(conn net.Conn, bufferSize int) {
 
 	// Responding
 	conn.Write([]byte("Message received."))
+	log.Println(string(buffer))
 }
