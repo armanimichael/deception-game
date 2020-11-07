@@ -14,8 +14,8 @@
 
 
 ## Additional Ideas
-- Knife "attack" action (5AP cost), which does not reveal your position but can only be used on the four cells adiacent to the Player
-- add action to place various Traps, con costo (in AP) e cooldown (in turni) variabili
+- Knife "attack" action (5AP cost), which does not reveal your position but can only be used on the four cells adjacent to the Player
+- add action to place various Traps, with cost (in AP) and cooldown (in turns) variable
   + Tunnel
   + Tripwire
   + Pitfall
