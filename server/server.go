@@ -4,34 +4,45 @@ import (
 	"log"
 	"net"
 	"os"
-)
 
-const (
-	connHost = "127.0.0.1"
-	connPort = "1234"
-	connType = "tcp"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	connHost, connPort, connType := getServerConfig()
+
 	// Creating TCP Connection
-	const host = connHost + ":" + connPort
+	host := connHost + ":" + connPort
 	listeningServer, err := net.Listen(connType, host)
 	if err != nil {
-		log.Println("Error listening:", err.Error())
-		os.Exit(1)
+		log.Fatal("Error listening:", err.Error())
 	}
 	defer listeningServer.Close()
 
+	// Server Starting
 	log.Printf("Listening on %v:%v\n", connHost, connPort)
 	for {
 		// Wait Incoming Connections
 		conn, err := listeningServer.Accept()
 		if err != nil {
-			log.Println("Error accepting: ", err.Error())
-			os.Exit(1)
+			log.Fatal("Error accepting: ", err.Error())
 		}
 		go handleRequest(conn, 1024)
 	}
+}
+
+func getServerConfig() (connHost string, connPort string, connType string) {
+	err := godotenv.Load(".server.env")
+
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	connHost = os.Getenv("HOST")
+	connPort = os.Getenv("PORT")
+	connType = "tcp"
+
+	return
 }
 
 // Handles incoming requests
