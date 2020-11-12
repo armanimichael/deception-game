@@ -128,8 +128,8 @@ def get_input():
                 
             
             if event.key == pygame.K_ESCAPE:
-                print(RES)
-                quit()
+                if screen != "MAIN_MENU": screen = "MAIN_MENU"
+                else: quit()
         
         if event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
