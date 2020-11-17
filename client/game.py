@@ -1,10 +1,9 @@
 import pygame
 import math, time, random, sys, os
-from colors import Colors
 from screeninfo import get_monitors
 
-pygame.init()
-pygame.display.set_caption("A Game of Deception")
+from colors import Colors
+from draw import DrawHandler as Draw
 
 RES_LIST = [
     [800 , 600],
@@ -12,248 +11,201 @@ RES_LIST = [
     [1280, 800],
     [1680, 1050],
     [1920, 1080]]
-
 MAX_RES = [get_monitors()[0].width, get_monitors()[0].height]
-DEF_RES = [800, 600]
-RES = RES_LIST[0]
-FPS = 10
 
-TOP_LEFT = []
-PLAYER = [3, 3]
-GRID = []
-CELL_COUNT = 10
-CELL_SIZE = 0
+MENUS = {"MOVE":["MOVE"],
+         "ATTACK":["SHOOT", "KNIFE"],
+         "TRAPS":["ALARM", "PITFALL"],
+         "DETECT":["DETECT"]}
 
-SELECT = "NONE"
+class Game:
+    def __init__(self):
+        self.RES = RES_LIST[0]
+        self.DISPLAY = pygame.display.set_mode(self.RES)
 
-menus = {"MOVE":["MOVE"], "ATTACK":["SHOOT", "KNIFE"], "TRAPS":["ALARM", "PITFALL"], "DETECT":["DETECT"]}
-clicked = False
-
-fpsClock = pygame.time.Clock()
-DISPLAY = pygame.display.set_mode(RES)#, pygame.FULLSCREEN)
-
-
-def init():
-    global GRID
-    
-    for i in range(0, CELL_COUNT):
-        GRID.append([])
-        for j in range(0, CELL_COUNT):
-            GRID[i].append([])
-    
-    GRID[PLAYER[0]][PLAYER[1]].append("PLAYER")
-
-def process():
-    global clicked
+        self.player_pos = [3, 3]
+        self.GRID = []
         
-    while True:
-        get_input()
-        draw()
-        clicked = False
+        self.cell_count = 10
+        self.cell_size = 0
+        self.top_left = []
 
-def draw():
-    DISPLAY.fill(Colors.WHITE)
-    dims = RES
-    
-    draw_grid()
-    draw_UI()
-    
-    pygame.display.update()
-
-def get_input():
-    global clicked, RES, DISPLAY, CELL_COUNT, SELECT
-    
-    # pygame.event.pump()
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            quit()
+        self.select = "NONE"
+        self.clicked = False
         
-        if event.type == pygame.KEYUP:
-            if event.key == pygame.K_o:
-                i = RES_LIST.index(RES)
-                if i < len(RES_LIST) - 1:
-                    
-                    r = RES_LIST[i]
-                    if r[0] <= MAX_RES[0] and r[1] <= MAX_RES[1]:
-                        RES = RES_LIST[i+1]
-                        DISPLAY = pygame.display.set_mode(RES)
-            
-            if event.key == pygame.K_u:
-                i = RES_LIST.index(RES)
-                if i > 0:
-                    RES = RES_LIST[i-1]
-                    DISPLAY = pygame.display.set_mode(RES)
-            
-            if event.key == pygame.K_j:
-                if CELL_COUNT >= 4: CELL_COUNT -= 1
-            
-            if event.key == pygame.K_k:
-                if CELL_COUNT < 16: CELL_COUNT += 1
-            
-            if event.key == pygame.K_ESCAPE:
-                if SELECT == "NONE": quit()
-                else: SELECT = "NONE"
+        self.play = True
+
         
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                clicked = True
-
-def hover(bot_right):
-    mouse = pygame.mouse.get_pos()
-    
-    if bot_right[0] > mouse[0] > TOP_LEFT[0] and bot_right[1] > mouse[1] > TOP_LEFT[1]:
-        cell = cell_center(mouse)
-        t = [(cell[0]*CELL_SIZE + TOP_LEFT[0]),
-             (cell[1]*CELL_SIZE + TOP_LEFT[1])]
+        for i in range(0, self.cell_count):
+            self.GRID.append([])
+            for j in range(0, self.cell_count):
+                self.GRID[i].append([])
         
-        bg = pygame.Rect(t[0], t[1], CELL_SIZE, CELL_SIZE)
-        pygame.draw.rect(DISPLAY, Colors.LIGHT_GRAY, bg)
+        self.GRID[self.player_pos[0]][self.player_pos[1]].append("PLAYER")
+    
+    def process(self):
+        self.get_input()
+        self.draw()
         
-        if clicked:
-            cell_click(cell)
+        self.clicked = False
 
 
-def menu_click(m):
-    global SELECT
-    # "MOVE", "ATTACK", "TRAPS", "DETECT"
-    
-    if SELECT == m: SELECT = "NONE"
-    else: SELECT = m
+    def draw(self):
+        self.DISPLAY.fill(Colors.WHITE)
+        dims = self.RES
+        
+        self.draw_grid()
+        self.draw_UI()
+        
+        pygame.display.update()
 
-def cell_click(cell):
-    global PLAYER, GRID
-    
-    tmp  = [[PLAYER[0], PLAYER[1]-1], [PLAYER[0], PLAYER[1]+1], [PLAYER[0]+1, PLAYER[1]], [PLAYER[0]-1, PLAYER[1]]]        
-    if cell in tmp:
-        if SELECT == "MOVE":
-            # in Server/Client Version: communicate with server (PlayerPos, MovePos) for check, then get the new PlayerPos
+    def get_input(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.play = False
             
-            GRID[cell[0]][cell[1]].append("PLAYER")
-            GRID[PLAYER[0]][PLAYER[1]].remove("PLAYER")
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_o:
+                    i = RES_LIST.index(self.RES)
+                    if i < len(RES_LIST) - 1:
+                        
+                        r = RES_LIST[i]
+                        if r[0] <= MAX_RES[0] and r[1] <= MAX_RES[1]:
+                            self.RES = RES_LIST[i+1]
+                            self.DISPLAY = pygame.display.set_mode(self.RES)
+                
+                if event.key == pygame.K_u:
+                    i = RES_LIST.index(self.RES)
+                    if i > 0:
+                        self.RES = RES_LIST[i-1]
+                        self.DISPLAY = pygame.display.set_mode(self.RES)
+                
+                if event.key == pygame.K_j:
+                    if self.cell_count >= 4: self.cell_count -= 1
+                
+                if event.key == pygame.K_k:
+                    if self.cell_count < 16: self.cell_count += 1
+                
+                if event.key == pygame.K_ESCAPE:
+                    if self.select == "NONE": self.play = False
+                    else: self.select = "NONE"
             
-            PLAYER = cell        
-        
-        elif SELECT in menus["TRAPS"]:
-            # in Server/Client Version: communicate with server (PlayerPos, TrapPos) to place Traps
-            GRID[cell[0]][cell[1]].append(SELECT)
-
-def cell_center(pos):
-    x, y = pos
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    self.clicked = True
     
-    x = int((x - TOP_LEFT[0]) / CELL_SIZE)
-    y = int((y - TOP_LEFT[1]) / CELL_SIZE)
     
-    return [x, y]
-
-def quit():
-    pygame.quit()
-    sys.exit()
-
-
-def draw_grid():
-    global TOP_LEFT, CELL_SIZE
-    
-    CELL_SIZE = int(RES[1] * .75 / CELL_COUNT)
-    TOP_LEFT = [
-        int(RES[0]/2 - (CELL_COUNT/2 * CELL_SIZE)),
-        int(RES[1] * .15 / 2)]
-    
-    bot_right = [(c + CELL_SIZE*CELL_COUNT) for c in TOP_LEFT]
-    hover(bot_right)
-    
-    for r in range(0, CELL_COUNT):
-        for c in range(0, CELL_COUNT):
-            x, y = [(TOP_LEFT[0] + CELL_SIZE*c), (TOP_LEFT[1] + CELL_SIZE*r)]
-            
-            objs = GRID[c][r]
-            txt  = ""
-            p    = False
-            
-            if objs != []:
-                for e in objs:
-                    if   e == "PLAYER" : p = True; txt = ""
-                    elif e == "PITFALL": txt = "X"
-                    elif e == "ALARM"  : txt = "A"
-            
-            if txt != "": draw_text(txt, int(CELL_SIZE*2/3), [int(x + CELL_SIZE/2), int(y + CELL_SIZE/2)])
-            pygame.draw.rect(DISPLAY, Colors.BLACK, (x, y, CELL_SIZE, CELL_SIZE), 1)
-            if p: draw_player(x, y, CELL_SIZE)
-    
-    bg = pygame.Rect(TOP_LEFT[0], TOP_LEFT[1], CELL_SIZE * CELL_COUNT, CELL_SIZE * CELL_COUNT)
-    pygame.draw.rect(DISPLAY, Colors.BLACK, bg, 3)
-
-def draw_UI():
-    width  = int(RES[0] / len(menus))
-    height = int(RES[0] / 15)
-    
-    y = RES[1] - height
-    i = 0
-    
-    draw_text(SELECT, 15, [35, y - 10])
-    
-    for m in menus:
-        x = i * width
-        
-        button(m, x, y, width, height, Colors.GRAY, Colors.DARK_GRAY, Colors.LIGHT_GRAY, menu_click, m)
-        i += 1
-    
-    if SELECT == "ATTACK" or SELECT == "TRAPS":
-        if SELECT == "ATTACK": x = width
-        if SELECT == "TRAPS": x = width * 2
-        
-        y = RES[1] - height
-        height = int(height * 3/4)
-        
-        for sub in menus[SELECT]:
-            y -= (height)
-            button(sub, x, y, int(width * 3/4), height, Colors.GRAY, Colors.DARK_GRAY, Colors.LIGHT_GRAY, menu_click, sub)
-
-def draw_player(x, y, size):
-    x = int(x + size/2)
-    y = int(y + size/2)
-    
-    size = int(size * 1/3)
-    
-    bg = pygame.Rect(0, 0, size, size)
-    bg.center = [x, y]
-    pygame.draw.rect(DISPLAY, Colors.BLACK, bg)
-
-
-def button(msg, x, y, w, h, rgb, h_rgb, b_rgb, action=None, args=[], border=3, t_dim=20, t_rgb=Colors.BLACK):
-    coords = [int(c) for c in (x, y, w, h)]
-    color = rgb
-    
-    if action != None:
+    def hover(self, bot_right):
         mouse = pygame.mouse.get_pos()
-        click = pygame.mouse.get_pressed()
         
-        if x + w > mouse[0] > x and y + h > mouse[1] > y:
-            color = h_rgb
-            if click[0] and action != None and clicked:
-                if args == []: action()
-                else: action(args)
+        if bot_right[0] > mouse[0] > self.top_left[0] and bot_right[1] > mouse[1] > self.top_left[1]:
+            cell = self.cell_center(mouse)
+            t = [(cell[0]*self.cell_size + self.top_left[0]),
+                (cell[1]*self.cell_size + self.top_left[1])]
+            
+            bg = pygame.Rect(t[0], t[1], self.cell_size, self.cell_size)
+            pygame.draw.rect(self.DISPLAY, Colors.LIGHT_GRAY, bg)
+            
+            if self.clicked:
+                self.cell_click(cell)
+
+    def menu_click(self, m):
+        # "MOVE", "ATTACK", "TRAPS", "DETECT"
+        
+        if self.select == m: self.select = "NONE"
+        else: self.select = m
+
+    def cell_click(self, cell):
+        tmp  = [[self.player_pos[0], self.player_pos[1]-1], 
+                [self.player_pos[0], self.player_pos[1]+1], 
+                [self.player_pos[0]+1, self.player_pos[1]], 
+                [self.player_pos[0]-1, self.player_pos[1]]]
+        
+        if cell in tmp:
+            if self.select == "MOVE":
+                # in Server/Client Version: communicate with server (PlayerPos, MovePos) for check, then get the new PlayerPos
+                
+                self.GRID[cell[0]][cell[1]].append("PLAYER")
+                self.GRID[self.player_pos[0]][self.player_pos[1]].remove("PLAYER")
+                
+                self.player_pos = cell        
+            
+            elif self.select in MENUS["TRAPS"]:
+                # in Server/Client Version: communicate with server (PlayerPos, TrapPos) to place Traps
+                self.GRID[cell[0]][cell[1]].append(self.select)
+
+    def cell_center(self, pos):
+        x, y = pos
+        
+        x = int((x - self.top_left[0]) / self.cell_size)
+        y = int((y - self.top_left[1]) / self.cell_size)
+        
+        return [x, y]
     
-    pygame.draw.rect(DISPLAY, color, coords)
-    pygame.draw.rect(DISPLAY, b_rgb, coords, border)
+
+    def draw_grid(self):
+        self.cell_size = int(self.RES[1] * .75 / self.cell_count)
+        self.top_left = [
+            int(self.RES[0]/2 - (self.cell_count/2 * self.cell_size)),
+            int(self.RES[1] * .15 / 2)]
+        
+        bot_right = [(c + self.cell_size*self.cell_count) for c in self.top_left]
+        self.hover(bot_right)
+        
+        for r in range(0, self.cell_count):
+            for c in range(0, self.cell_count):
+                x, y = [(self.top_left[0] + self.cell_size*c), (self.top_left[1] + self.cell_size*r)]
+                
+                objs = self.GRID[c][r]
+                txt  = ""
+                p    = False
+                
+                if objs != []:
+                    for e in objs:
+                        if   e == "PLAYER" : p = True; txt = ""
+                        elif e == "PITFALL": txt = "X"
+                        elif e == "ALARM"  : txt = "A"
+                
+                if txt != "": Draw.draw_text(self.DISPLAY, txt, int(self.cell_size*2/3), [int(x + self.cell_size/2), int(y + self.cell_size/2)])
+                pygame.draw.rect(self.DISPLAY, Colors.BLACK, (x, y, self.cell_size, self.cell_size), 1)
+                if p: self.draw_player(x, y, self.cell_size)
+        
+        bg = pygame.Rect(self.top_left[0], self.top_left[1], self.cell_size * self.cell_count, self.cell_size * self.cell_count)
+        pygame.draw.rect(self.DISPLAY, Colors.BLACK, bg, 3)
+
+    def draw_UI(self):
+        width  = int(self.RES[0] / len(MENUS))
+        height = int(self.RES[0] / 15)
+        
+        y = self.RES[1] - height
+        i = 0
+        
+        Draw.draw_text(self.DISPLAY, self.select, 15, [35, y - 10])
+        
+        for m in MENUS:
+            x = i * width
+            
+            Draw.button(self.DISPLAY, m, x, y, width, height, Colors.GRAY, Colors.DARK_GRAY, Colors.LIGHT_GRAY, self.menu_click, self.clicked, m)
+            i += 1
+        
+        if self.select == "ATTACK" or self.select == "TRAPS":
+            if self.select == "ATTACK": x = width
+            if self.select == "TRAPS": x = width * 2
+            
+            y = self.RES[1] - height
+            height = int(height * 3/4)
+            
+            for sub in MENUS[self.select]:
+                y -= (height)
+                Draw.button(self.DISPLAY, sub, x, y, int(width * 3/4), height, Colors.GRAY, Colors.DARK_GRAY, Colors.LIGHT_GRAY, self.menu_click, self.clicked, sub)
+
+    def draw_player(self, x, y, size):
+        x = int(x + size/2)
+        y = int(y + size/2)
+        
+        size = int(size * 1/3)
+        
+        bg = pygame.Rect(0, 0, size, size)
+        bg.center = [x, y]
+        pygame.draw.rect(self.DISPLAY, Colors.BLACK, bg)
     
-    draw_text(msg, t_dim, (int(x + (w/2)), int(y + (h/2))))
-
-def draw_text(msg, h, coords, color=Colors.BLACK):
-    font = pygame.font.Font("freesansbold.ttf", h)   
-    textSurf = font.render(msg, True, color)
-    textRect = textSurf.get_rect()
-    textRect.center = [int(c) for c in coords]
-    DISPLAY.blit(textSurf, textRect)
-
-def drawRegularPolygon(surface, color, numSides, tiltAngle, x, y, radius):
-    pts = []
-    for i in range(numSides):
-        x = x + radius * math.cos(tiltAngle + math.pi * 2 * i / numSides)
-        y = y + radius * math.sin(tiltAngle + math.pi * 2 * i / numSides)
-        pts.append([int(x), int(y)])
-    pygame.draw.polygon(surface, color, pts)
-
-
-
-init()
-process()
