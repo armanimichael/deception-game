@@ -6,8 +6,8 @@ import (
 )
 
 func main() {
-	connType, connHost, connPort := config.GetEnvServerConfig(".server.env")
-	srv := web.NewServer(connType, connHost, connPort)
+	connType, connHost, connPort, playersSlots := config.GetEnvServerConfig(".server.env")
+	srv := web.NewServer(connType, connHost, connPort, playersSlots)
 
 	srv.Run()
 }
