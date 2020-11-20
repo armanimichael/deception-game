@@ -2,13 +2,15 @@ package gameboard
 
 import (
 	"dg-server/player"
-	"dg-server/web"
+	"dg-server/user"
+
 	"errors"
 	"math/rand"
+	"net"
 )
 
 // TableSize represents the GameBoard size
-const TableSize = 8
+const TableSize = 2
 
 // Entity is anything representable inside a Gameboard cell
 type Entity struct {
@@ -30,8 +32,8 @@ func NewGameBoard(content [TableSize][TableSize][]Entity) *Gameboard {
 
 // SetGameBoardCell inserts a game object or player inside a cell.
 // If the cell if busy and cannot be occupied it returns an error
-func (gb *Gameboard) SetGameBoardCell(x int, y int, item Entity) (err error) {
-	if y >= len(gb.Content) || x >= len(gb.Content[y]) {
+func (gb *Gameboard) SetGameBoardCell(x uint, y uint, item Entity) (err error) {
+	if int(y) >= len(gb.Content) || int(x) >= len(gb.Content[y]) {
 		err = errors.New("index out of boundaries")
 	}
 
@@ -42,30 +44,32 @@ func (gb *Gameboard) SetGameBoardCell(x int, y int, item Entity) (err error) {
 }
 
 // PopulateGameboard defines a GameBoard grid
-func (gb *Gameboard) PopulateGameboard(users []web.User) {
+func (gb *Gameboard) PopulateGameboard(users map[net.Addr]*user.User) {
 	type coords struct {
 		x uint
 		y uint
 	}
 	var tempPos []coords
 
-	for _, user := range users {
+	for _, u := range users {
 		var newCoords coords
 		if len(tempPos) != 0 {
-			isCoordUsed := true
-			for isCoordUsed {
+			// Generating new Coordinates until they're unique
+			findNewCoords := true
+			for findNewCoords {
 				newCoords = coords{
 					x: uint(rand.Int31n(TableSize)),
 					y: uint(rand.Int31n(TableSize)),
 				}
 
-				temp := false
+				// Check for occupied cells
+				isCoordUsed := false
 				for _, pp := range tempPos {
 					if pp.x == newCoords.x && pp.y == newCoords.y {
-						temp = true
+						isCoordUsed = true
 					}
 				}
-				isCoordUsed = temp
+				findNewCoords = isCoordUsed
 			}
 		} else {
 			newCoords.x = uint(rand.Int31n(TableSize))
@@ -73,13 +77,15 @@ func (gb *Gameboard) PopulateGameboard(users []web.User) {
 		}
 		tempPos = append(tempPos, newCoords)
 
-		user.Player.X = newCoords.x
-		user.Player.Y = newCoords.y
+		// Setting Player Coords
+		u.Player.X = newCoords.x
+		u.Player.Y = newCoords.y
 
-		// Setting Gameboard Cell
-		gb.Content[newCoords.y][newCoords.x][0] = Entity{
-			Name:   user.Username,
-			Player: user.Player,
-		}
+		//Setting Gameboard Cell
+		gb.Content[u.Player.Y][u.Player.X] =
+			append(gb.Content[u.Player.Y][u.Player.X], Entity{
+				Name:   u.Username,
+				Player: u.Player,
+			})
 	}
 }

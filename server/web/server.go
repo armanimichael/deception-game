@@ -1,7 +1,10 @@
 package web
 
 import (
+	"dg-server/gameboard"
+	"dg-server/player"
 	"dg-server/serialization"
+	"dg-server/user"
 	"errors"
 	"fmt"
 	"log"
@@ -14,7 +17,8 @@ type Server struct {
 	ConnHost    string
 	ConnPort    string
 	PlayerSlots uint8
-	Users       map[net.Addr]*User
+	Users       map[net.Addr]*user.User
+	Gameboard   gameboard.Gameboard
 }
 
 // NewServer instantiate a new server
@@ -24,7 +28,8 @@ func NewServer(connType, connHost, connPort string, playerSlots uint8) *Server {
 		ConnHost:    connHost,
 		ConnPort:    connPort,
 		PlayerSlots: playerSlots,
-		Users:       make(map[net.Addr]*User),
+		Users:       make(map[net.Addr]*user.User),
+		Gameboard:   gameboard.Gameboard{},
 	}
 }
 
@@ -82,6 +87,9 @@ func (s *Server) newConnection(conn net.Conn) {
 		// User created
 		log.Printf("User %v joined.\n", user.Username)
 
+		// Check for Full Server
+		s.setupGame()
+
 		// Actions
 		switch data.Action {
 		case "leave":
@@ -93,6 +101,14 @@ func (s *Server) newConnection(conn net.Conn) {
 	}
 }
 
+func (s *Server) setupGame() {
+	// Setting up the gameboard
+	if len(s.Users) == int(s.PlayerSlots) {
+		s.Gameboard.PopulateGameboard(s.Users)
+		log.Println(s.Gameboard.Content)
+	}
+}
+
 func (s *Server) newUserConnection(conn net.Conn) error {
 	// Check for max user connections
 	if len(s.Users)+1 > int(s.PlayerSlots) {
@@ -100,26 +116,27 @@ func (s *Server) newUserConnection(conn net.Conn) error {
 		conn.Close()
 
 		return errors.New("Server Full")
-	} else if len(s.Users)+1 == int(s.PlayerSlots) {
-		// TODO Populating the Gameboard once players joined
 	}
 
 	return nil
 }
 
-func (s *Server) createNewUser(conn net.Conn, username string) (*User, error) {
+func (s *Server) createNewUser(conn net.Conn, username string) (*user.User, error) {
 	// Add user to user map
 	addr := conn.RemoteAddr()
-	user, ok := s.Users[addr]
+	u, ok := s.Users[addr]
 	if s.validateUsername(username) && !ok {
 		// User doesn't exist - creating a new one
-		user = &User{
+		u = &user.User{
 			Conn:     conn,
 			Username: username,
+			Player: &player.Player{
+				AP: 5,
+			},
 		}
-		s.Users[addr] = user
+		s.Users[addr] = u
 
-		return user, nil
+		return u, nil
 	}
 
 	return nil, errors.New("user already exist")
@@ -135,7 +152,7 @@ func (s *Server) validateUsername(username string) bool {
 	return true
 }
 
-func (s *Server) broadcast(sender *User, msg []byte) {
+func (s *Server) broadcast(sender *user.User, msg []byte) {
 	for addr, user := range s.Users {
 		if addr != sender.Conn.RemoteAddr() {
 			user.Conn.Write(msg)
