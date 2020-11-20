@@ -66,9 +66,11 @@ func (s *Server) newConnection(conn net.Conn) {
 	}
 
 	for {
-		data := serialization.NewDataFromClient()
+		data := serialization.NewRequest()
 		if err := data.Decode(conn); err != nil {
 			log.Printf("Invalid data from %v: %v\n", addr, err)
+			conn.Write([]byte(`{"result": "error", "msg": "Invalid data format."}`))
+
 			// TODO: Need more testing for users leaving correctly
 			if conn.Close() == nil {
 				delete(s.Users, addr)
@@ -80,12 +82,13 @@ func (s *Server) newConnection(conn net.Conn) {
 		user, err := s.createNewUser(conn, data.Username)
 		if err != nil {
 			log.Printf("User %v cannot join, cloned or invalid username.\n", addr)
-			conn.Write([]byte("This username is either invalid or already in use."))
+			conn.Write([]byte(`{"result": "error", "msg": "This username is either invalid or already in use."}`))
 			conn.Close()
 			return
 		}
 		// User created
 		log.Printf("User %v joined.\n", user.Username)
+		conn.Write([]byte(`{"result": "success", "msg": "Server joined."}`))
 
 		// Check for Full Server
 		s.setupGame()
@@ -94,6 +97,7 @@ func (s *Server) newConnection(conn net.Conn) {
 		switch data.Action {
 		case "leave":
 			log.Printf("User %v left.\n", user.Username)
+			conn.Write([]byte(`{"result": "success", "msg": "Server left."}`))
 			conn.Close()
 			delete(s.Users, addr)
 			return
@@ -105,14 +109,14 @@ func (s *Server) setupGame() {
 	// Setting up the gameboard
 	if len(s.Users) == int(s.PlayerSlots) {
 		s.Gameboard.PopulateGameboard(s.Users)
-		log.Println(s.Gameboard.Content)
+		s.broadcastAll([]byte(`{"result": "success", "msg": "Game Started."}`))
 	}
 }
 
 func (s *Server) newUserConnection(conn net.Conn) error {
 	// Check for max user connections
 	if len(s.Users)+1 > int(s.PlayerSlots) {
-		conn.Write([]byte("Server Full"))
+		conn.Write([]byte(`{"result": "error", "msg": "Server Full."}`))
 		conn.Close()
 
 		return errors.New("Server Full")
@@ -157,6 +161,12 @@ func (s *Server) broadcast(sender *user.User, msg []byte) {
 		if addr != sender.Conn.RemoteAddr() {
 			user.Conn.Write(msg)
 		}
+	}
+}
+
+func (s *Server) broadcastAll(msg []byte) {
+	for _, user := range s.Users {
+		user.Conn.Write(msg)
 	}
 }
 

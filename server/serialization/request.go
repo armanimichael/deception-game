@@ -14,19 +14,19 @@ type playerJoin struct {
 	Username string `json:"username"`
 }
 
-// DataFromClient represent data sent from Client to Server
-type DataFromClient struct {
+// Request represent data sent from Client to Server
+type Request struct {
 	playerMove
 	playerJoin
 }
 
-// NewDataFromClient initializes en empty struct of type DataFromClient
-func NewDataFromClient() *DataFromClient {
-	return &DataFromClient{}
+// NewRequest initializes an empty struct of type Request
+func NewRequest() *Request {
+	return &Request{}
 }
 
 // Decode JSON data to server legible data
-func (d *DataFromClient) Decode(conn net.Conn) error {
+func (d *Request) Decode(conn net.Conn) error {
 	decoder := json.NewDecoder(conn)
 	return decoder.Decode(d)
 }
