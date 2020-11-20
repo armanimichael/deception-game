@@ -19,7 +19,7 @@ MENUS = {"MOVE":["MOVE"],
          "DETECT":["DETECT"]}
 
 class Game:
-    def __init__(self):
+    def __init__(self, c):
         self.RES = RES_LIST[0]
         self.DISPLAY = pygame.display.set_mode(self.RES)
 
@@ -34,6 +34,7 @@ class Game:
         self.clicked = False
         
         self.play = True
+        self.connection = c
 
         
         for i in range(0, self.cell_count):

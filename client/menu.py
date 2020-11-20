@@ -14,7 +14,7 @@ RES_LIST = [
 MAX_RES = [get_monitors()[0].width, get_monitors()[0].height]
 
 class Menu:
-    def __init__(self):
+    def __init__(self, c):
         self.clicked = False
         self.screen = "MAIN_MENU" #MAIN_MENU, SETTINGS_MENU, CREDITS_SCREEN, CREATING_SERVER, CONNECTING_TO_SERVER
         
@@ -22,6 +22,7 @@ class Menu:
         self.DISPLAY = pygame.display.set_mode(self.RES)#, pygame.FULLSCREEN)
 
         self.play = True
+        self.connection = c
 
 
     def process(self):
@@ -93,10 +94,25 @@ class Menu:
         self.screen = t
         
         if self.screen == "CREATING_SERVER":
+            # Create Server
             os.system("../server/server")
+
+            # Connect to Server
+            self.connection.conn("localhost", 1234)
+            t = self.connection.recv()
+
+            if t != None:
+                self.play = False
+                self.screen = "MAIN_MENU"
+                self.DISPLAY = pygame.display.set_mode(self.RES)
+        
         
         if self.screen == "CONNECTING_TO_SERVER":
-            self.play = False
-            
-            self.screen = "MAIN_MENU"
-            self.DISPLAY = pygame.display.set_mode(self.RES)
+            # Connect to Server
+            self.connection.conn("localhost", 1234)
+            t = self.connection.recv()
+
+            if t != None:
+                self.play = False
+                self.screen = "MAIN_MENU"
+                self.DISPLAY = pygame.display.set_mode(self.RES)

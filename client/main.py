@@ -4,6 +4,7 @@ import time, sys
 
 from game import Game
 from menu import Menu
+from client import Client
 
 pygame.init()
 pygame.display.set_caption("A Game of Deception")
@@ -11,7 +12,8 @@ pygame.display.set_caption("A Game of Deception")
 FPS = 30
 fpsClock = pygame.time.Clock()
 
-MENU = Menu()
+c = Client()
+MENU = Menu(c)
 
 def main_loop():
     while True:
@@ -26,7 +28,7 @@ def menu_loop():
         fpsClock.tick(FPS)
 
 def game_loop():
-    GAME = Game()
+    GAME = Game(c)
     while GAME.play:
         GAME.process()
         fpsClock.tick(FPS)
