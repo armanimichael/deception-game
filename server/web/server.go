@@ -1,12 +1,11 @@
 package web
 
 import (
-	"bufio"
+	"dg-server/serialization"
 	"errors"
 	"fmt"
 	"log"
 	"net"
-	"strings"
 )
 
 // Server contains information about the current Server
@@ -49,61 +48,91 @@ func (s *Server) Run() {
 			continue
 		}
 
-		go newConnection(conn, s)
+		go s.newConnection(conn)
 	}
 }
 
-func newConnection(conn net.Conn, s *Server) {
+func (s *Server) newConnection(conn net.Conn) {
 	addr := conn.RemoteAddr()
-	log.Printf("User %v connected.", addr)
-
-	// TODO Decode sent data and get username
-	user, err := s.newUserConnection(conn)
+	err := s.newUserConnection(conn)
 	if err != nil {
 		log.Printf("User %v could not connect: %v", addr, err)
+		return
 	}
 
 	for {
-		msg, err := bufio.NewReader(conn).ReadString('\n')
-
-		if err != nil {
-			continue
-		}
-
-		// TODO: Find a better way to close server connection
-		if strings.TrimRight(msg, "\r\n") == "leave" {
-			log.Printf("User %v left.\n", addr)
-			conn.Close()
+		data := serialization.NewDataFromClient()
+		if err := data.Decode(conn); err != nil {
+			log.Printf("Invalid data from %v: %v\n", addr, err)
+			// TODO: Need more testing for users leaving correctly
+			if conn.Close() == nil {
+				delete(s.Users, addr)
+			}
 			return
 		}
 
-		data := []byte(msg)
-		s.broadcast(user, data)
+		// Creating user or refusing conn
+		user, err := s.createNewUser(conn, data.Username)
+		if err != nil {
+			log.Printf("User %v cannot join, cloned or invalid username.\n", addr)
+			conn.Write([]byte("This username is either invalid or already in use."))
+			conn.Close()
+			return
+		}
+		// User created
+		log.Printf("User %v joined.\n", user.Username)
+
+		// Actions
+		switch data.Action {
+		case "leave":
+			log.Printf("User %v left.\n", user.Username)
+			conn.Close()
+			delete(s.Users, addr)
+			return
+		}
 	}
 }
 
-func (s *Server) newUserConnection(conn net.Conn) (*User, error) {
+func (s *Server) newUserConnection(conn net.Conn) error {
 	// Check for max user connections
 	if len(s.Users)+1 > int(s.PlayerSlots) {
 		conn.Write([]byte("Server Full"))
 		conn.Close()
 
-		return nil, errors.New("Server Full")
+		return errors.New("Server Full")
+	} else if len(s.Users)+1 == int(s.PlayerSlots) {
+		// TODO Populating the Gameboard once players joined
 	}
 
-	addr := conn.RemoteAddr()
+	return nil
+}
 
+func (s *Server) createNewUser(conn net.Conn, username string) (*User, error) {
 	// Add user to user map
+	addr := conn.RemoteAddr()
 	user, ok := s.Users[addr]
-	if !ok {
+	if s.validateUsername(username) && !ok {
+		// User doesn't exist - creating a new one
 		user = &User{
 			Conn:     conn,
-			Username: "",
+			Username: username,
+		}
+		s.Users[addr] = user
+
+		return user, nil
+	}
+
+	return nil, errors.New("user already exist")
+}
+
+func (s *Server) validateUsername(username string) bool {
+	for _, user := range s.Users {
+		if user.Username == username {
+			return false
 		}
 	}
-	s.Users[addr] = user
 
-	return user, nil
+	return true
 }
 
 func (s *Server) broadcast(sender *User, msg []byte) {
@@ -112,4 +141,8 @@ func (s *Server) broadcast(sender *User, msg []byte) {
 			user.Conn.Write(msg)
 		}
 	}
+}
+
+func (s *Server) isServerFull() bool {
+	return s.PlayerSlots == uint8(len(s.Users))
 }
