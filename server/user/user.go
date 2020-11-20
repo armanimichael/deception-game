@@ -12,18 +12,3 @@ type User struct {
 	Username string
 	Player   *player.Player
 }
-
-// GetConn ...
-func (u *User) GetConn() net.Conn {
-	return u.Conn
-}
-
-// GetUsername ...
-func (u *User) GetUsername() string {
-	return u.Username
-}
-
-// GetPlayer ...
-func (u *User) GetPlayer() *player.Player {
-	return u.Player
-}
