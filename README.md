@@ -7,8 +7,9 @@ TODO: Add Description
 Environment Variables:
 
 - .server.env
-  - HOST
-  - PORT
+  - HOST - Server Address
+  - PORT - Server Port
+  - PLAYERS_SLOTS - Max number of players
 
 Go Packages (server-side):
 
