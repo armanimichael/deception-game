@@ -66,7 +66,7 @@ func (s *Server) newConnection(conn net.Conn) {
 	}
 
 	for {
-		data := serialization.NewDataFromClient()
+		data := serialization.NewRequest()
 		if err := data.Decode(conn); err != nil {
 			log.Printf("Invalid data from %v: %v\n", addr, err)
 			conn.Write([]byte(`{"result": "error", "msg": "Invalid data format."}`))
