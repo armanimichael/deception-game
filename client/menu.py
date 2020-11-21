@@ -1,5 +1,4 @@
-import pygame
-import math, time, random, sys, os, asyncio
+import pygame, subprocess
 from screeninfo import get_monitors
 
 from colors import Colors
@@ -15,14 +14,19 @@ MAX_RES = [get_monitors()[0].width, get_monitors()[0].height]
 
 class Menu:
     def __init__(self, c):
-        self.clicked = False
         self.screen = "MAIN_MENU" #MAIN_MENU, SETTINGS_MENU, CREDITS_SCREEN, CREATING_SERVER, CONNECTING_TO_SERVER
         
         self.RES = RES_LIST[0]
-        self.DISPLAY = pygame.display.set_mode(self.RES)#, pygame.FULLSCREEN)
+        self.DISPLAY = pygame.display.set_mode(self.RES)
 
         self.play = True
+        self.clicked = False
+        self.writing = False
+
         self.connection = c
+        self.server_process = None
+        self.error = ""
+        self.username = ""
 
 
     def process(self):
@@ -40,8 +44,6 @@ class Menu:
             x, y = [dims[0]/4, dims[1]/3]
             w, h = [x * 2, (y / 3 - 15)]
             
-            # button(msg, x, y, w, h, rgb, h_rgb, b_rgb)
-            
             Draw.button(self.DISPLAY, "Join Game", x, y, w, h, Colors.GRAY, Colors.DARK_GRAY, Colors.LIGHT_GRAY, self.screen_change, self.clicked, "CONNECTING_TO_SERVER")
             
             y += y/3
@@ -50,6 +52,11 @@ class Menu:
             y += y/3
             Draw.button(self.DISPLAY, "Settings" , x, y, w/2 - 5, h, Colors.GRAY, Colors.DARK_GRAY, Colors.LIGHT_GRAY, self.screen_change, self.clicked, "MAIN_MENU")
             Draw.button(self.DISPLAY, "Credits"  , x + w/2 + 5, y, w/2, h, Colors.GRAY, Colors.DARK_GRAY, Colors.LIGHT_GRAY, self.screen_change, self.clicked, "MAIN_MENU")
+
+            if self.error != "": Draw.draw_text(self.DISPLAY, self.error, 15, [5, self.RES[1]-5], False)
+
+            w, h = self.RES[0]/5, self.RES[1]/20
+            Draw.button(self.DISPLAY, self.username, self.RES[0]/2-w/2, self.RES[1]/5, w, h, Colors.WHITE, Colors.WHITE, Colors.BLACK, self.write, self.clicked, [], 1, int(h*3/4))
         
         elif self.screen == "CONNECTING_TO_SERVER":
             Draw.draw_text(self.DISPLAY, "SEARCHING FOR SERVER...", 50, [dims[0]/2, dims[1]/2])
@@ -60,58 +67,78 @@ class Menu:
         pygame.display.update()
 
 
+    def write(self): self.writing = True
+
     def get_input(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT: quit()
-            
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_o:
-                    i = RES_LIST.index(self.RES)
-                    if i < len(RES_LIST) - 1:
-                        
-                        r = RES_LIST[i]
-                        if r[0] <= MAX_RES[0] and r[1] <= MAX_RES[1]:
-                            self.RES = RES_LIST[i+1]
-                            self.DISPLAY = pygame.display.set_mode(self.RES)
-                
-                if event.key == pygame.K_u:
-                    i = RES_LIST.index(self.RES)
-                    if i > 0:
-                        self.RES = RES_LIST[i-1]
-                        self.DISPLAY = pygame.display.set_mode(self.RES)
+
+            if event.type == pygame.KEYDOWN:
+                if self.writing == True:
+                    if   event.key == pygame.K_RETURN or event.key == pygame.K_ESCAPE: self.writing  = False
+                    elif event.key == pygame.K_BACKSPACE: self.username = self.username[:-1]
+                    elif event.unicode.isalnum() and len(self.username) <= 10: self.username += event.unicode
+
+                else:
+                    if event.key == pygame.K_o:
+                        i = RES_LIST.index(self.RES)
+                        if i < len(RES_LIST) - 1:
+                            
+                            r = RES_LIST[i]
+                            if r[0] <= MAX_RES[0] and r[1] <= MAX_RES[1]:
+                                self.RES = RES_LIST[i+1]
+                                self.DISPLAY = pygame.display.set_mode(self.RES)
                     
-                
-                if event.key == pygame.K_ESCAPE:
-                    if self.screen != "MAIN_MENU": screen = "MAIN_MENU"
-                    else: quit()
+                    if event.key == pygame.K_u:
+                        i = RES_LIST.index(self.RES)
+                        if i > 0:
+                            self.RES = RES_LIST[i-1]
+                            self.DISPLAY = pygame.display.set_mode(self.RES)
+                        
+                    
+                    if event.key == pygame.K_ESCAPE:
+                        if self.screen != "MAIN_MENU": screen = "MAIN_MENU"
+                        else: quit()
             
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     self.clicked = True
+                    self.writing = False
+                    self.error = ""
 
 
     def screen_change(self, t):
-        self.screen = t
+        if t == "CREATING_SERVER" or t == "CONNECTING_TO_SERVER":
+            if len(self.username) > 5: self.screen = t
+            else: self.error = "Username is too short"
+        else: self.screen = t
         
         if self.screen == "CREATING_SERVER":
             error = False
 
             # Create Server
-            try: subprocess.run("../server/main")
-            except:
+            try: self.server_process = subprocess.Popen("../server/main")
+            except Exception as e:
                 error = True
-                print("COULD NOT CREATE SERVER")
-            
+                self.error = "Could not Create Server: " + str(e)
+
             # Connect to Server
-            if not error:
-                self.connection.conn("localhost", 1234)
-                self.connection.send(b'{"username":"Zampa"}')
+            try: self.connection.conn("localhost", 1234)
+            except Exception as e:
+                error = True
+                self.error = "Failed to Connect to Server: " + str(e)
+
+            if not error and self.server_process != None:
+                user = bytes(f'{{"username":"{self.username}"}}', 'utf-8')
+                self.connection.send(user)
 
                 res = self.connection.recv()
-                if res["result"] == success:
+                if res["result"] == "success":
                     self.play = False
                     self.DISPLAY = pygame.display.set_mode(self.RES)
-                else: print("ERROR")
+                else: 
+                    self.error = "Connection Fail: " + res["result"]
+                    self.connection.close()
 
             self.screen = "MAIN_MENU"
         
@@ -121,15 +148,20 @@ class Menu:
 
             # Connect to Server
             try: self.connection.conn("localhost", 1234)
-            except: error = True
+            except Exception as e:
+                error = True
+                self.error = "Failed to Connect to Server: " + str(e)
 
             if not error:
-                self.connection.send(b'{"username":"Zampa2S"}')
+                user = bytes(f'{{"username":"{self.username}"}}', 'utf-8')
+                self.connection.send(user)
 
                 res = self.connection.recv()
                 if res["result"] == "success":
                     self.play = False
                     self.DISPLAY = pygame.display.set_mode(self.RES)
-                else: print("ERROR")
+                else: 
+                    self.error = "Connection Fail: " + res["result"]
+                    self.connection.close()
 
             self.screen = "MAIN_MENU"

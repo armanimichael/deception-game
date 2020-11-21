@@ -21,11 +21,14 @@ class Draw:
         
         self.draw_text(surface, msg, t_dim, (int(x + (w/2)), int(y + (h/2))))
 
-    def draw_text(self, surface, msg, h, coords, color=(0,0,0)):
-        font = pygame.font.Font("freesansbold.ttf", h)   
+    def draw_text(self, surface, msg, h, coords, centered=True, color=(0,0,0)):
+        font = pygame.font.Font("freesansbold.ttf", h)
         textSurf = font.render(msg, True, color)
         textRect = textSurf.get_rect()
-        textRect.center = [int(c) for c in coords]
+
+        if centered: textRect.center = [int(c) for c in coords]
+        else       : textRect.bottomleft = [int(c) for c in coords]
+
         surface.blit(textSurf, textRect)
 
     def drawRegularPolygon(self, surface, color, numSides, tiltAngle, x, y, radius):

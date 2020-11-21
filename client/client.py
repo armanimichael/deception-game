@@ -1,10 +1,6 @@
 import socket, json
 
 class Client:
-    """demonstration class only
-      - coded for clarity, not efficiency
-    """
-
     def __init__(self, sock=None):
         if sock is None:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -23,3 +19,7 @@ class Client:
 
         if msg == b'': raise RuntimeError("Socket Connection Broken")
         else: return json.loads(msg)
+    
+    def close(self):
+        self.sock.close()
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
