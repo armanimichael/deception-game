@@ -14,19 +14,23 @@ MAX_RES = [get_monitors()[0].width, get_monitors()[0].height]
 
 class Menu:
     def __init__(self, c):
-        self.screen = "MAIN_MENU" #MAIN_MENU, SETTINGS_MENU, CREDITS_SCREEN, CREATING_SERVER, CONNECTING_TO_SERVER
-        
+        self.connection = c
         self.RES = RES_LIST[0]
         self.DISPLAY = pygame.display.set_mode(self.RES)
+
+        self.reset_menu()
+
+    def reset_menu(self):
+        self.screen = "MAIN_MENU" #MAIN_MENU, SETTINGS_MENU, CREDITS_SCREEN, CREATING_SERVER, CONNECTING_TO_SERVER
 
         self.play = True
         self.clicked = False
         self.writing = False
 
-        self.connection = c
         self.server_process = None
         self.error = ""
         self.username = ""
+
 
 
     def process(self):
@@ -136,8 +140,8 @@ class Menu:
                 if res["result"] == "success":
                     self.play = False
                     self.DISPLAY = pygame.display.set_mode(self.RES)
-                else: 
-                    self.error = "Connection Fail: " + res["result"]
+                else:
+                    self.error = "Connection Fail: " + res["msg"]
                     self.connection.close()
 
             self.screen = "MAIN_MENU"
@@ -161,7 +165,7 @@ class Menu:
                     self.play = False
                     self.DISPLAY = pygame.display.set_mode(self.RES)
                 else: 
-                    self.error = "Connection Fail: " + res["result"]
+                    self.error = "Connection Fail: " + res["msg"]
                     self.connection.close()
 
             self.screen = "MAIN_MENU"

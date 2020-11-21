@@ -1,5 +1,5 @@
 import pygame
-import math, time, random, sys, os
+import math, os, subprocess
 from screeninfo import get_monitors
 
 from colors import Colors
@@ -19,7 +19,7 @@ MENUS = {"MOVE":["MOVE"],
          "DETECT":["DETECT"]}
 
 class Game:
-    def __init__(self, c):
+    def __init__(self, info):
         self.RES = RES_LIST[0]
         self.DISPLAY = pygame.display.set_mode(self.RES)
 
@@ -34,8 +34,10 @@ class Game:
         self.clicked = False
         
         self.play = True
-        self.connection = c
-
+        self.connection = info["CONNECTION"]
+        
+        if info["SERVER"] != None: 
+            self.server_process = info["SERVER"]
         
         for i in range(0, self.cell_count):
             self.GRID.append([])
@@ -63,7 +65,7 @@ class Game:
     def get_input(self):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                self.play = False
+                self.quit()
             
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_o:
@@ -88,7 +90,7 @@ class Game:
                     if self.cell_count < 16: self.cell_count += 1
                 
                 if event.key == pygame.K_ESCAPE:
-                    if self.select == "NONE": self.play = False
+                    if self.select == "NONE": self.quit()
                     else: self.select = "NONE"
             
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -209,4 +211,11 @@ class Game:
         bg = pygame.Rect(0, 0, size, size)
         bg.center = [x, y]
         pygame.draw.rect(self.DISPLAY, Colors.BLACK, bg)
-    
+
+
+    def quit(self):
+        if self.server_process != None: subprocess.Popen.terminate(self.server_process)
+        else: self.connection.send(b'{"action":"leave"}')
+
+        self.connection.close()
+        self.play = False

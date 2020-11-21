@@ -20,7 +20,8 @@ def main_loop():
         menu_loop()
         game_loop()
         
-        MENU.play = True
+        MENU.reset_menu()
+
 
 def menu_loop():
     while MENU.play:
@@ -28,7 +29,9 @@ def menu_loop():
         fpsClock.tick(FPS)
 
 def game_loop():
-    GAME = Game(c)
+    info = {"SERVER":MENU.server_process, "CONNECTION":c}
+
+    GAME = Game(info)
     while GAME.play:
         GAME.process()
         fpsClock.tick(FPS)
