@@ -1,5 +1,5 @@
 import pygame
-import math, time, random, sys, os
+import math, time, random, sys, os, asyncio
 from screeninfo import get_monitors
 
 from colors import Colors
@@ -94,25 +94,42 @@ class Menu:
         self.screen = t
         
         if self.screen == "CREATING_SERVER":
+            error = False
+
             # Create Server
-            os.system("../server/server")
-
+            try: subprocess.run("../server/main")
+            except:
+                error = True
+                print("COULD NOT CREATE SERVER")
+            
             # Connect to Server
-            self.connection.conn("localhost", 1234)
-            t = self.connection.recv()
+            if not error:
+                self.connection.conn("localhost", 1234)
+                self.connection.send(b'{"username":"Zampa"}')
 
-            if t != None:
-                self.play = False
-                self.screen = "MAIN_MENU"
-                self.DISPLAY = pygame.display.set_mode(self.RES)
+                res = self.connection.recv()
+                if res["result"] == success:
+                    self.play = False
+                    self.DISPLAY = pygame.display.set_mode(self.RES)
+                else: print("ERROR")
+
+            self.screen = "MAIN_MENU"
         
         
         if self.screen == "CONNECTING_TO_SERVER":
-            # Connect to Server
-            self.connection.conn("localhost", 1234)
-            t = self.connection.recv()
+            error = False
 
-            if t != None:
-                self.play = False
-                self.screen = "MAIN_MENU"
-                self.DISPLAY = pygame.display.set_mode(self.RES)
+            # Connect to Server
+            try: self.connection.conn("localhost", 1234)
+            except: error = True
+
+            if not error:
+                self.connection.send(b'{"username":"Zampa2S"}')
+
+                res = self.connection.recv()
+                if res["result"] == "success":
+                    self.play = False
+                    self.DISPLAY = pygame.display.set_mode(self.RES)
+                else: print("ERROR")
+
+            self.screen = "MAIN_MENU"
