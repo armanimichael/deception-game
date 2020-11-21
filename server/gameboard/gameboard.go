@@ -21,6 +21,7 @@ type Entity struct {
 // Gameboard represents the Game Board and its content
 type Gameboard struct {
 	Content [TableSize][TableSize][]Entity
+	Turn    *player.Player
 }
 
 // NewGameBoard generates a new GameBoard struct
@@ -51,7 +52,15 @@ func (gb *Gameboard) PopulateGameboard(users map[net.Addr]*user.User) {
 	}
 	var tempPos []coords
 
+	isTurnSet := false
 	for _, u := range users {
+		// Set first turn
+		if !isTurnSet {
+			gb.Turn = u.Player
+			isTurnSet = true
+		}
+
+		// Setting player coords
 		var newCoords coords
 		if len(tempPos) != 0 {
 			// Generating new Coordinates until they're unique
@@ -81,7 +90,7 @@ func (gb *Gameboard) PopulateGameboard(users map[net.Addr]*user.User) {
 		u.Player.X = newCoords.x
 		u.Player.Y = newCoords.y
 
-		//Setting Gameboard Cell
+		// Setting Gameboard Cell
 		gb.Content[u.Player.Y][u.Player.X] =
 			append(gb.Content[u.Player.Y][u.Player.X], Entity{
 				Name:   u.Username,
