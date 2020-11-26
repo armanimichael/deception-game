@@ -2,22 +2,25 @@ package serialization
 
 import (
 	"encoding/json"
-	"net"
+	"io"
 )
 
 // Response represents the server response to the client
 type Response struct {
-	Result  string `json:"result"`
-	Message string `json:"msg"`
+	Result     string `json:"result"`
+	Message    string `json:"msg"`
+	connection io.Writer
 }
 
-// NewResponse initializes an empty struct of type Response
-func NewResponse() *Response {
-	return &Response{}
+// NewResponse initializes a Response
+func NewResponse(conn io.Writer) *Response {
+	return &Response{
+		connection: conn,
+	}
 }
 
 // Encode data to JSON
-func (r *Response) Encode(conn net.Conn) error {
-	encoder := json.NewEncoder(conn)
-	return encoder.Encode(r)
+func (res *Response) Encode(response Response) error {
+	encoder := json.NewEncoder(res.connection)
+	return encoder.Encode(response)
 }

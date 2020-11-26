@@ -2,7 +2,8 @@ package serialization
 
 import (
 	"encoding/json"
-	"net"
+	"errors"
+	"io"
 )
 
 type playerMove struct {
@@ -18,15 +19,23 @@ type playerJoin struct {
 type Request struct {
 	playerMove
 	playerJoin
+	connection io.Reader
 }
 
-// NewRequest initializes an empty struct of type Request
-func NewRequest() *Request {
-	return &Request{}
+// NewRequest initializes a Request
+func NewRequest(conn io.Reader) *Request {
+	return &Request{
+		connection: conn,
+	}
 }
 
 // Decode JSON data to server legible data
-func (d *Request) Decode(conn net.Conn) error {
-	decoder := json.NewDecoder(conn)
-	return decoder.Decode(d)
+func (req *Request) Decode() error {
+	decoder := json.NewDecoder(req.connection)
+
+	err := decoder.Decode(req)
+	if req.Username == "" {
+		err = errors.New("username cannot be an empty string")
+	}
+	return err
 }
