@@ -19,7 +19,7 @@ func GetEnvServerConfig(envFileName string) (connType, connHost, connPort string
 	connType = "tcp"
 	connHost = os.Getenv("HOST")
 	connPort = os.Getenv("PORT")
-	playersSlotsStr := os.Getenv("PLAYERS_SLOTS")
+	playersSlotsStr := os.Getenv("PLAYER_SLOTS")
 
 	pSlots, err := strconv.Atoi(playersSlotsStr)
 
