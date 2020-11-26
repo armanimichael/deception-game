@@ -69,9 +69,8 @@ func TestServerResponse(t *testing.T) {
 			out := make([]byte, 64)
 
 			if _, err := conn.Read(out); err == nil {
-				// Converting 1024 slice to new length
+				// Convert server response to expected length (for comparison)
 				out = out[:len(tc.expected)]
-				fmt.Println(string(out), string(tc.expected))
 				if bytes.Compare(out, tc.expected) != 0 {
 					t.Error("response did match expected output")
 				}
