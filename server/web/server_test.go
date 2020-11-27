@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"testing"
+	"time"
 )
 
 const (
@@ -27,12 +28,16 @@ func init() {
 }
 
 func TestServerConnection(t *testing.T) {
+	// Cannot use wait groups as server.Run() never exists until server closure
+	// TODO: find better solution than timeout
+	time.Sleep(100 * time.Millisecond)
 	conn, err := net.Dial(protocol, host+":"+port)
 	if err != nil {
 		t.Error("could not connect to server: ", err)
 		return
 	}
 	defer conn.Close()
+	conn.Write([]byte(`{"action": "leave"}`)) // Safely leaving server
 }
 
 func TestServerResponse(t *testing.T) {
@@ -61,6 +66,7 @@ func TestServerResponse(t *testing.T) {
 				return
 			}
 			defer conn.Close()
+			defer conn.Write([]byte(`{"action": "leave"}`)) // Safely leaving server
 
 			if _, err := conn.Write(tc.payload); err != nil {
 				t.Error("could not write payload to TCP server:", err)
